@@ -25,6 +25,10 @@ def delete_message(chat_id, message_id):
     return tg("deleteMessage", {"chat_id": chat_id, "message_id": message_id})
 
 
+def send_message(chat_id, text):
+    return tg("sendMessage", {"chat_id": chat_id, "text": text})
+
+
 def handle_update(update):
     """Kelgan update'ni tekshiradi va xizmat xabarlarini o'chiradi."""
     msg = update.get("message") or update.get("edited_message")
@@ -33,6 +37,19 @@ def handle_update(update):
 
     chat_id = msg["chat"]["id"]
     message_id = msg["message_id"]
+
+    # /start yoki /help buyrug'iga javob beradi (bot tirikligini bilish uchun)
+    text = msg.get("text", "")
+    if text.startswith("/start") or text.startswith("/help"):
+        send_message(
+            chat_id,
+            "Salom! 🧹 Men Flora Cleaner botman.\n\n"
+            "Guruhda kimdir qo'shilsa yoki chiqsa, o'sha xabarni avtomatik "
+            "o'chirib turaman.\n\n"
+            "Ishlashim uchun meni guruhga admin qiling va \"Delete messages\" "
+            "ruxsatini yoqing. ✅",
+        )
+        return
 
     # Kirdi / chiqdi va boshqa xizmat xabarlari
     service_keys = (
