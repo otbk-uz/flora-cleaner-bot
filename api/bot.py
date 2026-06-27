@@ -36,8 +36,11 @@ def delete_message(chat_id, message_id):
     return tg("deleteMessage", {"chat_id": chat_id, "message_id": message_id})
 
 
-def send_message(chat_id, text):
-    return tg("sendMessage", {"chat_id": chat_id, "text": text, "disable_web_page_preview": True})
+def send_message(chat_id, text, parse_mode=None):
+    payload = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+    return tg("sendMessage", payload)
 
 
 def get_chat_member(chat_id, user_id):
@@ -91,10 +94,22 @@ def warn_user_text(count):
     )
 
 
-def warn_group_text(name, count):
+def html_escape(s):
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def user_mention(user_id, name, username):
+    """Bosiladigan tegli mention qaytaradi (HTML)."""
+    if username:
+        return f"@{username}"
+    return f'<a href="tg://user?id={user_id}">{html_escape(name)}</a>'
+
+
+def warn_group_text(user_id, name, username, count):
     remaining = max(REQUIRED_INVITES - count, 0)
+    mention = user_mention(user_id, name, username)
     return (
-        f"🌸 {name}, ваше сообщение удалено.\n"
+        f"🌸 {mention}, ваше сообщение удалено.\n"
         f"Чтобы писать в группе, пригласите ещё {remaining} человек(а) "
         f"(приглашено: {count}/{REQUIRED_INVITES}).\n"
         "Напишите боту в личные сообщения, чтобы получать уведомления. Спасибо! 💐"
@@ -211,8 +226,12 @@ def handle_update(update):
     # 1) Foydalanuvchining lichkasiga ogohlantirish (rus tilida)
     dm = send_message(user_id, warn_user_text(count))
     if not dm.get("ok"):
-        # Lichkaga yuborib bo'lmadi (bot bilan /start bosmagan) — guruhda qisqa eslatma
-        send_message(chat_id, warn_group_text(name, count))
+        # Lichkaga yuborib bo'lmadi (bot bilan /start bosmagan) — guruhda teglab eslatma
+        send_message(
+            chat_id,
+            warn_group_text(user_id, name, sender.get("username"), count),
+            parse_mode="HTML",
+        )
 
     # 2) Adminga xabar (rus tilida)
     if ADMIN_CHAT_ID:
